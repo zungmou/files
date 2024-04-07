@@ -2,7 +2,7 @@
 // @name         雪球标点符号复位
 // @namespace    http://tampermonkey.net/
 // @version      0.1
-// @description  标点符号格式化，确保复制的一致性。
+// @description  
 // @author       Dylan
 // @match        https://xueqiu.com/*/*
 // @icon         https://www.google.com/s2/favicons?domain=xueqiu.com
