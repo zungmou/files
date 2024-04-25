@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--https://unpkg.com/papaparse@5.4.1/papaparse.min.js-->
+    <script src="../JavaScript/papaparse.min.js"></script>
+    <script>
+        let csv_header = [];
+        let csv_idioms = [];
+        let running = true;
+
+        (function () {
+            fetch('../CSV/zh-idioms.csv').then(response => response.text()).then(text => {
+                Papa.parse(text, {
+                    complete: function (results) {
+                        csv_header = results.data[0];
+                        csv_header[0] = '成语'
+                        csv_idioms = results.data.slice(1);
+                        csv_idioms = csv_idioms.map(item => {
+                            return csv_header.reduce((obj, key, index) => {
+                                obj[key] = item[index];
+                                return obj;
+                            }, {});
+                        });
+                        console.log(csv_header);
+                        console.log(csv_idioms[0]);
+                    }
+                });
+            });
+        })()
+
+        const interval = window.setInterval(function () {
+            if (running && document.querySelector('body > table') != null && csv_idioms.length > 0) {
+                window.setTimeout(ready, 1000);
+            }
+        })
+
+        function $(selector) {
+            const result = document.querySelectorAll(selector);
+
+            if (result.length == 1) {
+                return result[0];
+            } else {
+                return result;
+            }
+        }
+
+        function ready(random = null) {
+            running = false;
+            // window.clearInterval(interval);
+
+            if (random == null) {
+                random = Math.floor(Math.random() * csv_idioms.length);
+            }
+
+            const idiom = csv_idioms[random];
+            const 成语 = idiom['成语'].split('');
+            const 拼音 = idiom['拼音'].split(' ');
+            let output = []
+
+            for (let i = 0; i < 成语.length; i++) {
+                output.push(`<ruby>${成语[i]}<rt>${拼音[i]}</rt></ruby>`);
+            }
+
+            output = output.join('');
+            $('#td-idioms').innerHTML = output;
+            $('#td-explanation').innerHTML = idiom['解释'];
+            $('#td-example').innerHTML = idiom['例子'];
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            background-image: url(https://cdn.ready-market.ai/106/aed8e971//Templates/pic/m/lcm-B108-top.jpg?v=24c07ba4);
+        }
+
+        body>table {
+            width: 100%;
+            height: 100%;
+            margin-top: 1em;
+        }
+
+        #td-idioms {
+            background-image: linear-gradient(to left, violet, indigo, blue, green, yellow, orange, red);
+            background-clip: text;
+            color: transparent;
+            font-size: 4em;
+        }
+
+        #td-idioms ruby {
+            letter-spacing: .2em;
+        }
+
+        #td-idioms rt {
+            font-size: .3em;
+            letter-spacing: 0;
+        }
+
+        #td-refresh {
+            padding: 1em 0;
+        }
+
+        #td-refresh button {
+            font-size: 1.5em;
+        }
+
+        thead td {
+            text-align: center;
+        }
+
+        td {
+            text-align: left;
+        }
+
+        tbody td,
+        tbody th {
+            color: white;
+            text-shadow: 1px 1px 1px #000;
+            padding: 1em .5em;
+            vertical-align: top;
+            border-bottom: 1px solid #000;
+        }
+
+        tbody th {
+            text-align: right;
+            text-wrap: nowrap;
+            border-right: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <table>
+        <thead>
+            <tr>
+                <td id="td-idioms" colspan="2"></td>
+            </tr>
+            <tr>
+                <td id="td-refresh" colspan="2">
+                    <button onclick="ready(Math.floor(Math.random() * csv_idioms.length))">刷新</button>
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>解释</th>
+                <td id="td-explanation"></td>
+            </tr>
+            <tr>
+                <th>例子</th>
+                <td id="td-example"></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>
