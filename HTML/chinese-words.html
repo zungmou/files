@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>中文词语学习</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        neutral: '#F8FAFC',
+                        dark: '#1E293B'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .word-appear {
+                animation: wordAppear 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .pulse-effect {
+                animation: pulseEffect 1.5s infinite;
+            }
+            @keyframes wordAppear {
+                0% { transform: scale(0.8); opacity: 0; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes pulseEffect {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(22, 93, 255, 0.4); }
+                50% { box-shadow: 0 0 0 15px rgba(22, 93, 255, 0); }
+            }
+            .phone-portrait {
+                @apply h-[85vh] max-h-[600px] aspect-[9/16];
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans text-dark flex flex-col items-center justify-center p-0 m-0">
+    <div id="app" class="w-full h-full flex flex-col items-center justify-center p-4 transition-all duration-500">
+        <!-- 词语显示区域 -->
+        <div id="word-container"
+            class="relative w-full phone-portrait bg-white rounded-2xl shadow-xl flex items-center justify-center overflow-hidden group hover:shadow-2xl transition-all duration-300 mx-auto">
+            <div id="word-display" class="text-[clamp(2.5rem,20vw,7rem)] font-bold text-center word-appear px-4">
+                <!-- 词语将在这里动态显示 -->
+            </div>
+
+            <!-- 进度指示器 -->
+            <div
+                class="absolute top-4 right-4 bg-primary/90 text-white px-4 py-2 rounded-full text-sm shadow-md backdrop-blur-sm">
+                <span id="progress">0/0</span>
+            </div>
+
+            <!-- 点击提示 -->
+            <div
+                class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-dark/80 text-white px-4 py-2 rounded-full text-sm shadow-lg backdrop-blur-sm transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                <i class="fa-solid fa-hand-pointer mr-2"></i>点击切换词语
+            </div>
+        </div>
+
+        <!-- 控制区域 -->
+        <div class="mt-6 w-full max-w-md flex justify-center gap-4">
+            <button id="start-btn"
+                class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-play"></i>
+                <span>开始测试</span>
+            </button>
+            <button id="reset-btn"
+                class="bg-gray-200 hover:bg-gray-300 text-dark px-6 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-refresh"></i>
+                <span>重置</span>
+            </button>
+        </div>
+
+        <!-- 状态指示 -->
+        <div id="status" class="mt-4 text-lg font-medium text-primary text-center max-w-md"></div>
+    </div>
+
+    <script>
+        // 示例词语数据
+        const wordList = [
+            "弘扬", "秩序", "奉献", "屈辱", "觉醒", "屹立", "愉快", "亲昵", "敬老院", "干涉", "缺乏", "阅历", "言谈举止", "困惑", "协商", "大概", "唠叨", "鼓励", "谨言慎行", "自律", "严谨", "稀奇", "锻炼", "分享", "矛盾", "激化", "倾诉", "各司其职", "嘱咐", "遭遇", "诚恳", "道歉", "疏漏", "安慰", "无辜", "避免", "怨气", "督促", "逐渐", "超载", "磕碰", "承担", "餐馆", "赡养", "归宿", "疲惫", "贡献", "疑惑", "和谐", "实践", "载体", "座右铭", "聂荣臻", "诠释", "潜移默化", "塑造", "涵养", "砥砺", "虚拟", "残障", "障碍", "罚款", "拘留", "滥用", "惩戒", "捐赠", "疫情", "歧视", "侮辱", "虐待", "遗弃", "措施", "监督", "履行", "妨碍", "温馨", "香蕉", "扶危济困", "乐善好施", "报酬", "孤寡老人", "香港", "公益", "辉煌", "腐败", "侵略", "可歌可泣", "垂涎欲滴", "林则徐", "虎门销烟", "顽强", "妥协", "丧权辱国", "殖民地", "圆明园", "断壁残垣", "辛丑条约", "抛头颅洒热血", "遗骸"
+        ];
+
+        // 应用状态
+        const state = {
+            words: [...wordList],
+            currentWord: null,
+            round: 0,
+            speakingCount: 0,
+            speakingInterval: null,
+            isPlaying: false
+        };
+
+        // DOM 元素
+        const wordDisplay = document.getElementById('word-display');
+        const progressDisplay = document.getElementById('progress');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const statusDisplay = document.getElementById('status');
+        const appContainer = document.getElementById('app');
+        const wordContainer = document.getElementById('word-container');
+
+        // 初始化页面
+        function init() {
+            updateProgress();
+            startBtn.addEventListener('click', handleStartClick);
+            resetBtn.addEventListener('click', resetTest);
+            document.addEventListener('click', handleScreenClick);
+            document.addEventListener('touchstart', handleScreenClick);
+
+            // 检测 TTS 支持
+            if (!('speechSynthesis' in window)) {
+                statusDisplay.textContent = '您的浏览器不支持语音合成功能';
+                statusDisplay.classList.add('text-red-500');
+                startBtn.disabled = true;
+            } else {
+                statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
+            }
+
+            // 监听屏幕方向变化
+            window.addEventListener('resize', adjustForOrientation);
+            adjustForOrientation();
+        }
+
+        // 根据屏幕方向调整布局
+        function adjustForOrientation() {
+            if (window.innerHeight > window.innerWidth) {
+                // 竖屏模式
+                wordContainer.classList.add('phone-portrait');
+                wordContainer.classList.remove('max-w-4xl', 'aspect-video');
+            } else {
+                // 横屏模式
+                wordContainer.classList.remove('phone-portrait');
+                wordContainer.classList.add('max-w-4xl', 'aspect-video');
+            }
+        }
+
+        // 开始测试
+        function handleStartClick() {
+            if (state.isPlaying) {
+                pauseTest();
+            } else {
+                startTest();
+            }
+        }
+
+        function startTest() {
+            if (state.isPlaying) return;
+
+            state.isPlaying = true;
+            startBtn.innerHTML = '<i class="fa-solid fa-pause"></i><span>暂停</span>';
+            startBtn.classList.remove('bg-primary');
+            startBtn.classList.add('bg-red-500');
+
+            nextWord();
+        }
+
+        function pauseTest() {
+            if (!state.isPlaying) return;
+
+            // 清除定时器
+            if (state.speakingInterval) {
+                clearInterval(state.speakingInterval);
+            }
+
+            state.isPlaying = false;
+            startBtn.innerHTML = '<i class="fa-solid fa-play"></i><span>继续</span>';
+            startBtn.classList.remove('bg-red-500');
+            startBtn.classList.add('bg-primary');
+
+            statusDisplay.textContent = '已暂停，点击"继续"按钮继续测试';
+        }
+
+        // 重置测试
+        function resetTest() {
+            // 清除定时器
+            if (state.speakingInterval) {
+                clearInterval(state.speakingInterval);
+            }
+
+            // 重置状态
+            state.words = [...wordList];
+            state.currentWord = null;
+            state.round = 0;
+            state.speakingCount = 0;
+            state.isPlaying = false;
+
+            // 更新UI
+            wordDisplay.textContent = '';
+            updateProgress();
+            statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
+
+            startBtn.innerHTML = '<i class="fa-solid fa-play"></i><span>开始测试</span>';
+            startBtn.classList.remove('bg-red-500');
+            startBtn.classList.add('bg-primary');
+        }
+
+        // 处理屏幕点击事件
+        function handleScreenClick(event) {
+            // 忽略开始按钮和重置按钮的点击
+            if (event.target === startBtn || event.target === resetBtn) {
+                return;
+            }
+
+            // 确保测试正在进行
+            if (!state.isPlaying) {
+                return;
+            }
+
+            // 如果当前有词语正在展示，直接切换到下一个
+            if (state.currentWord) {
+                nextWord();
+            }
+        }
+
+        // 获取下一个随机词语
+        function nextWord() {
+            // 清除之前的定时器
+            if (state.speakingInterval) {
+                clearInterval(state.speakingInterval);
+            }
+
+            // 检查是否所有词语都已测试完
+            if (state.words.length === 0) {
+                wordDisplay.textContent = '测试完成！';
+                wordDisplay.classList.add('text-primary');
+                statusDisplay.textContent = '恭喜，您已完成所有词语的测试！';
+                state.isPlaying = false;
+
+                startBtn.innerHTML = '<i class="fa-solid fa-play"></i><span>开始测试</span>';
+                startBtn.classList.remove('bg-red-500');
+                startBtn.classList.add('bg-primary');
+
+                return;
+            }
+
+            // 随机选择一个词语
+            const randomIndex = Math.floor(Math.random() * state.words.length);
+            state.currentWord = state.words[randomIndex];
+            state.words.splice(randomIndex, 1);
+            state.round++;
+            state.speakingCount = 0;
+
+            // 更新UI
+            wordDisplay.textContent = state.currentWord;
+            wordDisplay.classList.remove('text-primary');
+            wordDisplay.classList.add('word-appear');
+            setTimeout(() => {
+                wordDisplay.classList.remove('word-appear');
+            }, 600);
+
+            updateProgress();
+            statusDisplay.textContent = `正在朗读第 ${state.round} 个词语，共 ${wordList.length} 个`;
+
+            // 朗读词语
+            speakWord();
+
+            // 设置定时朗读
+            state.speakingInterval = setInterval(() => {
+                state.speakingCount++;
+                if (state.speakingCount >= 3) {
+                    clearInterval(state.speakingInterval);
+                    statusDisplay.textContent = '点击屏幕继续测试下一个词语';
+                } else {
+                    speakWord();
+                }
+            }, 5000);
+        }
+
+        // 朗读词语
+        function speakWord() {
+            if (!state.currentWord) return;
+
+            const utterance = new SpeechSynthesisUtterance(state.currentWord);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.9;
+            utterance.volume = 1;
+
+            // 添加朗读动画效果
+            wordDisplay.classList.add('pulse-effect');
+            utterance.onend = () => {
+                wordDisplay.classList.remove('pulse-effect');
+            };
+
+            // 停止任何正在进行的语音
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utterance);
+        }
+
+        // 更新进度显示
+        function updateProgress() {
+            progressDisplay.textContent = `${wordList.length - state.words.length}/${wordList.length}`;
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
