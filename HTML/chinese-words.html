@@ -104,7 +104,8 @@
             round: 0,
             speakingCount: 0,
             speakingInterval: null,
-            isPlaying: false
+            isPlaying: false,
+            hasUserInteraction: false
         };
 
         // DOM 元素
@@ -121,8 +122,7 @@
             updateProgress();
             startBtn.addEventListener('click', handleStartClick);
             resetBtn.addEventListener('click', resetTest);
-            document.addEventListener('click', handleScreenClick);
-            document.addEventListener('touchstart', handleScreenClick);
+            document.addEventListener('click', handleUserClick); // 仅监听鼠标点击
 
             // 检测 TTS 支持
             if (!('speechSynthesis' in window)) {
@@ -151,8 +151,43 @@
             }
         }
 
+        // 处理用户点击以解锁TTS
+        function handleUserClick(event) {
+            // 忽略开始按钮和重置按钮的点击
+            if (event.target === startBtn || event.target === resetBtn) {
+                return;
+            }
+
+            if (!state.hasUserInteraction) {
+                state.hasUserInteraction = true;
+                statusDisplay.textContent = '交互已检测，现在可以使用语音功能';
+                setTimeout(() => {
+                    if (state.isPlaying) {
+                        statusDisplay.textContent = `正在朗读第 ${state.round} 个词语，共 ${wordList.length} 个`;
+                    } else {
+                        statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
+                    }
+                }, 2000);
+            }
+
+            // 只有在测试进行中且已交互时才切换词语
+            if (state.isPlaying && state.hasUserInteraction) {
+                nextWord();
+            }
+        }
+
         // 开始测试
         function handleStartClick() {
+            // 确保有用户交互
+            if (!state.hasUserInteraction) {
+                statusDisplay.textContent = '请先点击屏幕任意位置以启用语音功能';
+                statusDisplay.classList.add('text-red-500');
+                setTimeout(() => {
+                    statusDisplay.classList.remove('text-red-500');
+                }, 3000);
+                return;
+            }
+
             if (state.isPlaying) {
                 pauseTest();
             } else {
@@ -211,24 +246,6 @@
             startBtn.classList.add('bg-primary');
         }
 
-        // 处理屏幕点击事件
-        function handleScreenClick(event) {
-            // 忽略开始按钮和重置按钮的点击
-            if (event.target === startBtn || event.target === resetBtn) {
-                return;
-            }
-
-            // 确保测试正在进行
-            if (!state.isPlaying) {
-                return;
-            }
-
-            // 如果当前有词语正在展示，直接切换到下一个
-            if (state.currentWord) {
-                nextWord();
-            }
-        }
-
         // 获取下一个随机词语
         function nextWord() {
             // 清除之前的定时器
@@ -285,7 +302,7 @@
 
         // 朗读词语
         function speakWord() {
-            if (!state.currentWord) return;
+            if (!state.currentWord || !state.hasUserInteraction) return;
 
             const utterance = new SpeechSynthesisUtterance(state.currentWord);
             utterance.lang = 'zh-CN';
