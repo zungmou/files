@@ -105,7 +105,8 @@
             speakingCount: 0,
             speakingInterval: null,
             isPlaying: false,
-            hasUserInteraction: false
+            hasUserInteraction: false,
+            isFirstInteraction: true
         };
 
         // DOM 元素
@@ -122,7 +123,7 @@
             updateProgress();
             startBtn.addEventListener('click', handleStartClick);
             resetBtn.addEventListener('click', resetTest);
-            document.addEventListener('click', handleUserClick); // 仅监听鼠标点击
+            document.addEventListener('click', handleUserClick);
 
             // 检测 TTS 支持
             if (!('speechSynthesis' in window)) {
@@ -130,7 +131,7 @@
                 statusDisplay.classList.add('text-red-500');
                 startBtn.disabled = true;
             } else {
-                statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
+                statusDisplay.textContent = '请点击屏幕任意位置以启用语音功能';
             }
 
             // 监听屏幕方向变化
@@ -158,21 +159,50 @@
                 return;
             }
 
+            // 首次交互时执行特殊处理
+            if (state.isFirstInteraction) {
+                state.isFirstInteraction = false;
+                unlockTTS();
+                return;
+            }
+
             if (!state.hasUserInteraction) {
                 state.hasUserInteraction = true;
-                statusDisplay.textContent = '交互已检测，现在可以使用语音功能';
+                statusDisplay.textContent = '语音功能已启用，请点击"开始测试"按钮';
                 setTimeout(() => {
-                    if (state.isPlaying) {
-                        statusDisplay.textContent = `正在朗读第 ${state.round} 个词语，共 ${wordList.length} 个`;
-                    } else {
+                    if (!state.isPlaying) {
                         statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
                     }
                 }, 2000);
+                return;
             }
 
             // 只有在测试进行中且已交互时才切换词语
             if (state.isPlaying && state.hasUserInteraction) {
                 nextWord();
+            }
+        }
+
+        // 解锁TTS功能
+        function unlockTTS() {
+            // 创建一个简单的语音实例来解锁浏览器限制
+            const testUtterance = new SpeechSynthesisUtterance('');
+            testUtterance.onend = () => {
+                state.hasUserInteraction = true;
+                statusDisplay.textContent = '语音功能已启用，请点击"开始测试"按钮';
+                setTimeout(() => {
+                    if (!state.isPlaying) {
+                        statusDisplay.textContent = '请点击"开始测试"按钮开始学习';
+                    }
+                }, 2000);
+            };
+
+            // 尝试播放空语音
+            speechSynthesis.speak(testUtterance);
+
+            // 如果被浏览器阻止，提示用户
+            if (speechSynthesis.pending) {
+                statusDisplay.textContent = '请再次点击屏幕以完全启用语音功能';
             }
         }
 
@@ -286,7 +316,7 @@
             statusDisplay.textContent = `正在朗读第 ${state.round} 个词语，共 ${wordList.length} 个`;
 
             // 朗读词语
-            speakWord();
+            setTimeout(speakWord, 300); // 延迟一点确保UI更新完成
 
             // 设置定时朗读
             state.speakingInterval = setInterval(() => {
@@ -317,7 +347,14 @@
 
             // 停止任何正在进行的语音
             speechSynthesis.cancel();
+
+            // 尝试播放语音
             speechSynthesis.speak(utterance);
+
+            // 如果语音被阻止，提示用户
+            if (speechSynthesis.pending) {
+                statusDisplay.textContent = '如果没有声音，请再次点击屏幕';
+            }
         }
 
         // 更新进度显示
